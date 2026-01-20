@@ -104,8 +104,84 @@ const LearnerSubmissions = [
 
 
 function getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions) {
+  try {
+    // Validate course ID matches
+    if (CourseInfo.id !== AssignmentGroup.course_id) {
+      throw new Error(
+        `Course ID does not match Assignment Course ID. Expected ${CourseInfo.id}, got ${AssignmentGroup.course_id}`
+      );
+    }
 
+    const result = [];
+    const learnerMap = {};
 
+    // Initialize learner records
+    LearnerSubmissions.forEach(submission => {
+      if (!learnerMap[submission.learner_id]) {
+        learnerMap[submission.learner_id] = {
+          id: submission.learner_id,
+          totalScore: 0,
+          totalPoints: 0,
+          scores: {}
+        };
+      }
+    });
+
+    // Process each submission
+    LearnerSubmissions.forEach(submission => {
+      const assignment = AssignmentGroup.assignments.find(a => a.id === submission.assignment_id);
+
+      if (!assignment) {
+        console.warn(`Assignment ${submission.assignment_id} not found`);
+        return;
+      }
+
+      // Check if assignment is due yet (not in the future)
+      const dueDate = new Date(assignment.due_at);
+      if (dueDate > new Date()) {
+        // Skip assignments not yet due
+        return;
+      }
+
+      // Validate points_possible
+      if (assignment.points_possible === 0) {
+        throw new Error(`Assignment ${assignment.id} has invalid points_possible: 0`);
+      }
+
+      let score = submission.submission.score;
+
+      // Check if submission is late and apply 10% penalty
+      const submittedDate = new Date(submission.submission.submitted_at);
+      if (submittedDate > dueDate) {
+        score = score - assignment.points_possible * 0.1;
+      }
+
+      // Store assignment score as percentage
+      learnerMap[submission.learner_id].scores[assignment.id] = score / assignment.points_possible;
+      learnerMap[submission.learner_id].totalScore += score;
+      learnerMap[submission.learner_id].totalPoints += assignment.points_possible;
+    });
+
+    // Build result array
+    Object.values(learnerMap).forEach(learner => {
+      const resultObj = {
+        id: learner.id,
+        avg: learner.totalPoints > 0 ? learner.totalScore / learner.totalPoints : 0
+      };
+
+      // Add individual assignment scores
+      Object.keys(learner.scores).forEach(assignmentId => {
+        resultObj[assignmentId] = learner.scores[assignmentId];
+      });
+
+      result.push(resultObj);
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error in getLearnerData:", error.message);
+    throw error;
+  }
 }
 
 // Reference date used to check if an assignment's deadline has passed
@@ -148,7 +224,6 @@ function uniqueLearners(LearnerSubmissions) {
     return learners;
 }
     const learners = uniqueLearners(LearnerSubmissions);
-    const result = [];
  
  //   console.log(learners);
 
@@ -241,14 +316,65 @@ if (is_not_late(assignmentsData[k].due_at, learnerData[j][2]) === false){
    // console.log(learnerData[j][3]);
     
 }
-
-            console.log(`Learner ID: ${learnerData[j][0]} | Assignment ID: ${learnerData[j][1]} | Due Date: ${assignmentsData[k].due_at} | Submitted At: ${learnerData[j][2]} | Score: ${learnerData[j][3]} | Is Not Late: ${is_not_late(assignmentsData[k].due_at, learnerData[j][2])} 
-            | Points Possible: ${assignmentsData[k].points_possible} | Weight: ${AssignmentGroup.group_weight} |  ${learnerData[j][3]} / ${assignmentsData[k].points_possible} | is Due: ${isDue(assignmentsData[k].due_at)}`);
-        
-        
         }
     }
 }
+
+// Create result array with object format: {id, avg, assignment_id: grade, ...}
+const result = [];
+const learnerGrades = {};
+
+// Initialize learner objects
+learnerData.forEach(row => {
+  const learnerId = row[0];
+  if (!learnerGrades[learnerId]) {
+    learnerGrades[learnerId] = {
+      id: learnerId,
+      totalScore: 0,
+      totalPoints: 0,
+      grades: {}
+    };
+  }
+});
+
+// Populate assignment grades
+learnerData.forEach(row => {
+  const learnerId = row[0];
+  const assignmentId = row[1];
+  const score = row[3];
+  
+  // Find assignment points possible
+  const assignment = assignmentsData.find(a => a.id === assignmentId);
+  if (assignment) {
+    // Only include assignment if it's due (past due date)
+    const dueDate = new Date(assignment.due_at);
+    const currentDate = new Date();
+    if (dueDate <= currentDate) {
+      const grade = score / assignment.points_possible;
+      learnerGrades[learnerId].grades[assignmentId] = grade;
+      learnerGrades[learnerId].totalScore += score;
+      learnerGrades[learnerId].totalPoints += assignment.points_possible;
+    }
+  }
+});
+
+// Build result array with proper format
+Object.keys(learnerGrades).forEach(learnerId => {
+  const learner = learnerGrades[learnerId];
+  const resultObj = {
+    id: learner.id,
+    avg: learner.totalPoints > 0 ? learner.totalScore / learner.totalPoints : 0
+  };
+  
+  // Add assignment grades as numeric keys
+  Object.keys(learner.grades).sort((a, b) => a - b).forEach(assignmentId => {
+    resultObj[assignmentId] = learner.grades[assignmentId];
+  });
+  
+  result.push(resultObj);
+});
+
+console.log(result);
 
 
 
