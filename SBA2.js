@@ -108,7 +108,8 @@ function getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions) {
 
 }
 
-let testDate = dueDate("2023-01-25");
+// Reference date used to check if an assignment's deadline has passed
+let testDate = new Date("2026-01-26");
 
 //Cheacks if the submission is late
 function dueDate( due_at, submitted_at ) {
@@ -120,6 +121,21 @@ function dueDate( due_at, submitted_at ) {
     }
     return isItLate;
 }
+
+//check if assignment is due yet
+function isDue(due_at)
+{
+  const dueDate = new Date(due_at);
+  console.log(dueDate);
+  if(dueDate < testDate){
+    return true;
+  
+  }
+
+ 
+  return false;
+}
+
 
 // Check Unique Learners
 function uniqueLearners(LearnerSubmissions) {
@@ -209,9 +225,10 @@ function is_not_late(datedue, datesub){
     }
 
 return is_it_late};
+
 console.log(is_not_late("2023-01-25", "2023-01-24"));
 
-console.log(assignmentsData[1]);
+//console.log(assignmentsData[1]);
 
 
 
@@ -221,12 +238,12 @@ for (let j = 0; j < learnerData.length; j++) {
         if (learnerData[j][1] === assignmentsData[k].id) {
 if (is_not_late(assignmentsData[k].due_at, learnerData[j][2]) === false){
     learnerData[j][3] = learnerData[j][3] - assignmentsData[k].points_possible * 0.1;
-    console.log(learnerData[j][3]);
+   // console.log(learnerData[j][3]);
     
 }
 
-            console.log(`Learner ID: ${learnerData[j][0]} | Assignment ID: ${learnerData[j][1]} | Due Date: ${assignmentsData[k].due_at} | Submitted At: ${learnerData[j][2]} | Score: ${learnerData[j][3]} | Is Late: ${is_not_late(assignmentsData[k].due_at, learnerData[j][2])} 
-            | Points Possible: ${assignmentsData[k].points_possible} | Weight: ${AssignmentGroup.group_weight} |  ${learnerData[j][3]} / ${assignmentsData[k].points_possible}`);
+            console.log(`Learner ID: ${learnerData[j][0]} | Assignment ID: ${learnerData[j][1]} | Due Date: ${assignmentsData[k].due_at} | Submitted At: ${learnerData[j][2]} | Score: ${learnerData[j][3]} | Is Not Late: ${is_not_late(assignmentsData[k].due_at, learnerData[j][2])} 
+            | Points Possible: ${assignmentsData[k].points_possible} | Weight: ${AssignmentGroup.group_weight} |  ${learnerData[j][3]} / ${assignmentsData[k].points_possible} | is Due: ${isDue(assignmentsData[k].due_at)}`);
         
         
         }
